@@ -1,0 +1,32 @@
+"area: api":
+  - changed-files:
+      - any-glob-to-any-file: "src/schulmanager-api.mjs"
+"area: calendar":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/google-calendar-sync.mjs"
+          - "src/schedule-events.mjs"
+          - "src/timezone.mjs"
+          - "src/date-range.mjs"
+"area: container":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Dockerfile"
+          - "docker-compose*.yml"
+          - ".dockerignore"
+"area: documentation":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "LICENSE"
+"area: tests":
+  - changed-files:
+      - any-glob-to-any-file: "test/**"
+"area: automation":
+  - changed-files:
+      - any-glob-to-any-file: ".github/**"
+"area: configuration":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".env.example"
+          - "package.json"

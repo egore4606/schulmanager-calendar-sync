@@ -5,3 +5,7 @@ node_modules
 .playwright-mcp
 server-package
 *.log
+.git
+.github
+docs
+test

@@ -70,7 +70,6 @@ export async function pushGoogleCalendar({ events, range, logger = console }) {
   }
 
   const result = {
-    calendarId,
     inserted,
     updated,
     deleted,
@@ -265,7 +264,9 @@ async function googleRequest({ accessToken, path, method = "GET", body = null })
         await delay(backoffMs(attempt));
         continue;
       }
-      throw new Error(`${label} failed with HTTP ${response.status}: ${text.slice(0, 1000)}`);
+      throw new Error(
+        `${label} failed with HTTP ${response.status}: ${safeGoogleError(text)}`
+      );
     } catch (error) {
       if (error.name === "AbortError") {
         if (attempt < MAX_RETRIES) {
@@ -308,9 +309,24 @@ function delay(ms) {
 async function parseGoogleResponse(response, label) {
   const text = await response.text();
   if (!response.ok) {
-    throw new Error(`${label} failed with HTTP ${response.status}: ${text.slice(0, 1000)}`);
+    throw new Error(
+      `${label} failed with HTTP ${response.status}: ${safeGoogleError(text)}`
+    );
   }
   return text ? JSON.parse(text) : {};
+}
+
+function safeGoogleError(text) {
+  try {
+    const parsed = JSON.parse(text);
+    const message = parsed?.error?.message || parsed?.error_description;
+    if (message) {
+      return String(message).replace(/\s+/g, " ").slice(0, 300);
+    }
+  } catch {
+    // Do not echo an unknown response body; it may contain event data.
+  }
+  return "Google API returned an error response.";
 }
 
 function base64urlJson(value) {

@@ -10,6 +10,13 @@ const PORT = Number(process.env.PORT || 8080);
 const DATA_DIR = process.env.DATA_DIR || "/data";
 const INTERVAL_MINUTES = Number(process.env.SYNC_INTERVAL_MINUTES || 30);
 
+if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
+  throw new Error("PORT must be an integer between 1 and 65535.");
+}
+if (!Number.isFinite(INTERVAL_MINUTES) || INTERVAL_MINUTES <= 0) {
+  throw new Error("SYNC_INTERVAL_MINUTES must be greater than zero.");
+}
+
 let lastStatus = {
   ok: false,
   startedAt: null,
@@ -22,7 +29,7 @@ const server = http.createServer(async (request, response) => {
   try {
     const url = new URL(request.url, `http://${request.headers.host}`);
 
-    if (url.pathname === "/health") {
+    if (url.pathname === "/health" && ["GET", "HEAD"].includes(request.method)) {
       sendJson(response, lastStatus.ok ? 200 : 503, lastStatus);
       return;
     }
@@ -40,6 +47,13 @@ server.listen(PORT, "0.0.0.0", () => {
 
 scheduleSync();
 setInterval(scheduleSync, INTERVAL_MINUTES * 60 * 1000);
+
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.on(signal, () => {
+    console.log(`${signal} received; closing health server.`);
+    server.close(() => process.exit(0));
+  });
+}
 
 function scheduleSync() {
   if (syncPromise) {

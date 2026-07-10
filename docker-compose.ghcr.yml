@@ -1,6 +1,6 @@
 services:
   schulmanager-calendar:
-    build: .
+    image: ${SCHULMANAGER_IMAGE:-ghcr.io/egore4606/schulmanager-calendar-sync:latest}
     container_name: schulmanager-calendar
     restart: unless-stopped
     env_file:

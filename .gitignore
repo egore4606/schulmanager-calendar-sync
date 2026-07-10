@@ -1,6 +1,10 @@
 .env
+.env.*
+!.env.example
 data/
 output/
 node_modules/
 .playwright-mcp/
 server-package/
+*.log
+.DS_Store

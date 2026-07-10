@@ -74,11 +74,13 @@ export class SchulmanagerApi {
 
     if (lessonsResult?.status !== 200) {
       throw new Error(
-        `get-actual-lessons failed: ${JSON.stringify(lessonsResult)}`
+        `get-actual-lessons failed with status ${lessonsResult?.status ?? "unknown"}.`
       );
     }
     if (classHoursResult?.status !== 200) {
-      throw new Error(`get-class-hours failed: ${JSON.stringify(classHoursResult)}`);
+      throw new Error(
+        `get-class-hours failed with status ${classHoursResult?.status ?? "unknown"}.`
+      );
     }
 
     return {
@@ -210,11 +212,11 @@ async function parseJsonResponse(response, label) {
   try {
     json = text ? JSON.parse(text) : null;
   } catch (error) {
-    throw new Error(`${label} returned non-JSON response: ${text.slice(0, 300)}`);
+    throw new Error(`${label} returned a non-JSON response.`);
   }
 
   if (!response.ok) {
-    throw new Error(`${label} failed with HTTP ${response.status}: ${text}`);
+    throw new Error(`${label} failed with HTTP ${response.status}.`);
   }
 
   return json;

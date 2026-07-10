@@ -27,7 +27,13 @@ export function normalizeScheduleEvents({
   rawEvents.sort(compareEvents);
   const slotEvents = collapseSameSlotEvents(rawEvents);
 
-  return mergeAdjacent ? mergeAdjacentEvents(slotEvents) : slotEvents;
+  const normalizedEvents = mergeAdjacent
+    ? mergeAdjacentEvents(slotEvents)
+    : slotEvents;
+
+  // Raw Schulmanager responses can contain personal and account-specific data.
+  // Keep them only while merging and never persist them in schedule.json.
+  return normalizedEvents.map(({ source: _source, ...event }) => event);
 }
 
 function lessonToEvent({ lesson, classHour, timezone }) {

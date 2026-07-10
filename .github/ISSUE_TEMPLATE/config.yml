@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Setup and usage questions
+    url: https://github.com/egore4606/schulmanager-calendar-sync/discussions
+    about: Ask for help without sharing credentials or private timetable data.
+  - name: Security vulnerability
+    url: https://github.com/egore4606/schulmanager-calendar-sync/security/advisories/new
+    about: Report vulnerabilities privately.
