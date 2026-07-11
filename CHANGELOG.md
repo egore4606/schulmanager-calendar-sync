@@ -12,6 +12,7 @@ All notable changes are documented here. The project follows [Semantic Versionin
 
 ### Changed
 
+- Runtime and CI now use the latest Node.js 24 LTS line.
 - Raw Schulmanager response objects are removed before timetable snapshots are persisted.
 - Health responses no longer contain the Google Calendar ID.
 - Container defaults now use a read-only filesystem, no Linux capabilities, and an integrated health check.
