@@ -308,7 +308,7 @@ async function deleteEvent({ accessToken, calendarId, eventId }) {
 }
 
 async function googleRequest({ accessToken, path, method = "GET", body = null }) {
-  const label = `${method} ${path}`;
+  const label = `${method} Google Calendar request`;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -330,10 +330,9 @@ async function googleRequest({ accessToken, path, method = "GET", body = null })
         await delay(backoffMs(attempt));
         continue;
       }
-      const httpError = new Error(
-        `${label} failed with HTTP ${response.status}: ${safeGoogleError(text)}`
-      );
+      const httpError = new Error(`${label} failed with HTTP ${response.status}.`);
       httpError.status = response.status;
+      httpError.isSanitizedGoogleError = true;
       throw httpError;
     } catch (error) {
       if (error.name === "AbortError") {
@@ -347,7 +346,10 @@ async function googleRequest({ accessToken, path, method = "GET", body = null })
         await delay(backoffMs(attempt));
         continue;
       }
-      throw error;
+      if (error.isSanitizedGoogleError) {
+        throw error;
+      }
+      throw new Error(`${label} failed.`);
     } finally {
       clearTimeout(timeout);
     }
@@ -377,24 +379,9 @@ function delay(ms) {
 async function parseGoogleResponse(response, label) {
   const text = await response.text();
   if (!response.ok) {
-    throw new Error(
-      `${label} failed with HTTP ${response.status}: ${safeGoogleError(text)}`
-    );
+    throw new Error(`${label} failed with HTTP ${response.status}.`);
   }
   return text ? JSON.parse(text) : {};
-}
-
-function safeGoogleError(text) {
-  try {
-    const parsed = JSON.parse(text);
-    const message = parsed?.error?.message || parsed?.error_description;
-    if (message) {
-      return String(message).replace(/\s+/g, " ").slice(0, 300);
-    }
-  } catch {
-    // Do not echo an unknown response body; it may contain event data.
-  }
-  return "Google API returned an error response.";
 }
 
 function base64urlJson(value) {

@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 export const DEFAULT_SUBJECT_ICONS = {
@@ -70,13 +70,21 @@ function mappingFilePath() {
 
 export function loadSubjectIconMapping() {
   const filePath = mappingFilePath();
+  const usesDefaultPath = !process.env.GOOGLE_CALENDAR_SUBJECT_ICONS_FILE;
   try {
     mkdirSync(path.dirname(filePath), { recursive: true });
     try {
-      writeFileSync(filePath, `${JSON.stringify(DEFAULT_SUBJECT_ICONS, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+      writeFileSync(filePath, `${JSON.stringify(DEFAULT_SUBJECT_ICONS, null, 2)}\n`, {
+        encoding: "utf8",
+        flag: "wx",
+        mode: 0o600
+      });
     } catch (writeError) {
       if (writeError.code !== "EEXIST") {
         throw writeError;
+      }
+      if (usesDefaultPath) {
+        chmodSync(filePath, 0o600);
       }
     }
     const mapping = JSON.parse(readFileSync(filePath, "utf8"));

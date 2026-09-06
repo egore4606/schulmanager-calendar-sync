@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { chmod, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { normalizeScheduleEvents } from "./schedule-events.mjs";
 import { SchulmanagerApi } from "./schulmanager-api.mjs";
@@ -46,18 +46,31 @@ export async function syncSchedule({
     events
   };
 
-  await writeFile(
+  await writePrivateJson(
     path.join(dataDir, "schedule.json"),
-    JSON.stringify(payload, null, 2),
-    "utf8"
+    payload
   );
-  await writeFile(
+  await writePrivateJson(
     path.join(dataDir, "status.json"),
-    JSON.stringify({ ok: true, generatedAt, range, eventCount: events.length }, null, 2),
-    "utf8"
+    { ok: true, generatedAt, range, eventCount: events.length }
   );
 
   return payload;
+}
+
+export async function writePrivateJson(filePath, value) {
+  try {
+    await chmod(filePath, 0o600);
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+  await writeFile(filePath, JSON.stringify(value, null, 2), {
+    encoding: "utf8",
+    mode: 0o600
+  });
+  await chmod(filePath, 0o600);
 }
 
 function envFlag(name) {

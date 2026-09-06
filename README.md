@@ -52,6 +52,7 @@ git clone https://github.com/egore4606/schulmanager-calendar-sync.git
 cd schulmanager-calendar-sync
 cp .env.example .env
 mkdir -p data
+chmod 600 .env
 ```
 
 ### 2. Add credentials
@@ -62,6 +63,7 @@ For Google Calendar synchronization:
 
 1. Create a Google Cloud service account and enable the Google Calendar API.
 2. Save its JSON key as `data/google-service-account.json`.
+   Restrict access to the host account and container user that run this service; do not make the key world-readable.
 3. Share the target Google Calendar with the service account's `client_email` and grant permission to edit events.
 4. Set `GOOGLE_CALENDAR_SYNC_ENABLED=true` and `GOOGLE_CALENDAR_ID` in `.env`.
 
@@ -152,7 +154,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing a change. Operational d
 ## Limitations
 
 - A Schulmanager bearer token can expire and may need to be refreshed.
-- Automatic bundle-version discovery depends on Schulmanager's current web assets.
+- Automatic bundle-version discovery depends on same-origin Schulmanager web assets; set `SCHULMANAGER_BUNDLE_VERSION` explicitly if the upstream site moves them to another origin.
 - The service intentionally has no browser UI and no credential-management interface.
 - Google Calendar changes made manually to managed events may be overwritten, and deleted managed events may be restored, on the next sync.
 

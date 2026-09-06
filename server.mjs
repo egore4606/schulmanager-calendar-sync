@@ -37,7 +37,7 @@ const server = http.createServer(async (request, response) => {
     response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     response.end("Not found\n");
   } catch (error) {
-    sendJson(response, 500, { ok: false, error: error.message });
+    sendJson(response, 500, { ok: false, error: "Request processing failed." });
   }
 });
 
@@ -94,10 +94,15 @@ async function runSync() {
       ok: false,
       startedAt,
       finishedAt: new Date().toISOString(),
-      error: error.message
+      error: "Synchronization failed; inspect service logs."
     };
-    console.error("Sync failed:", error);
+    console.error(`Sync failed: ${safeLogMessage(error)}`);
   }
+}
+
+function safeLogMessage(error) {
+  const status = Number.isInteger(error?.status) ? ` (HTTP ${error.status})` : "";
+  return `An operation failed${status}.`;
 }
 
 function sendJson(response, statusCode, payload) {

@@ -100,3 +100,57 @@ test("insertEvent revives a tombstoned event after Google returns HTTP 409", asy
   assert.match(requests[1].url, /\/events\/sm123\?sendUpdates=none$/);
   assert.deepEqual(JSON.parse(requests[1].options.body), event);
 });
+
+test("Google Calendar failures do not expose the calendar ID or upstream response", async () => {
+  const originalFetch = globalThis.fetch;
+  const calendarId = "private-calendar@example.test";
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({ error: { message: `Calendar ${calendarId} is unavailable` } }),
+      { status: 404, headers: { "content-type": "application/json" } }
+    );
+
+  try {
+    await assert.rejects(
+      insertEvent({
+        accessToken: "synthetic-token",
+        calendarId,
+        event: { id: "sm-private", summary: "Private" }
+      }),
+      (error) => {
+        assert.equal(error.status, 404);
+        assert.equal(error.message, "POST Google Calendar request failed with HTTP 404.");
+        assert.doesNotMatch(error.message, new RegExp(calendarId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+        assert.doesNotMatch(error.message, /private-calendar|calendars|unavailable/);
+        return true;
+      }
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Google Calendar fetch exceptions do not expose request URLs", async () => {
+  const originalFetch = globalThis.fetch;
+  const calendarId = "private-calendar@example.test";
+  globalThis.fetch = async (url) => {
+    throw new Error(`connect failed for ${url}`);
+  };
+
+  try {
+    await assert.rejects(
+      insertEvent({
+        accessToken: "synthetic-token",
+        calendarId,
+        event: { id: "sm-private", summary: "Private" }
+      }),
+      (error) => {
+        assert.equal(error.message, "POST Google Calendar request failed.");
+        assert.doesNotMatch(error.message, /private-calendar|calendars|googleapis/);
+        return true;
+      }
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

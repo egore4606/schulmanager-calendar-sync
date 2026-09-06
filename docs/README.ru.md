@@ -28,12 +28,14 @@ git clone https://github.com/egore4606/schulmanager-calendar-sync.git
 cd schulmanager-calendar-sync
 cp .env.example .env
 mkdir -p data
+chmod 600 .env
 ```
 
 Добавьте актуальный `SCHULMANAGER_TOKEN` в `.env`. Для Google Calendar:
 
 1. Включите Google Calendar API и создайте service account.
 2. Сохраните JSON-ключ как `data/google-service-account.json`.
+   Разрешите чтение только учётной записи хоста и пользователю контейнера, запускающим сервис; не делайте ключ доступным всем пользователям.
 3. Предоставьте `client_email` service account права редактирования целевого календаря.
 4. Задайте `GOOGLE_CALENDAR_SYNC_ENABLED=true` и `GOOGLE_CALENDAR_ID`.
 

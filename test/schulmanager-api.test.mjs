@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   SchulmanagerApi,
+  discoverBundleVersion,
   extractBundleVersion,
   extractImportedScriptUrls
 } from "../src/schulmanager-api.mjs";
@@ -27,6 +28,98 @@ test("extractImportedScriptUrls resolves relative static and dynamic imports", (
   assert.deepEqual(urls, [
     "https://example.test/assets/chunk-a.js",
     "https://example.test/assets/chunk-b.js"
+  ]);
+});
+
+test("extractImportedScriptUrls excludes protocol-relative cross-origin imports", () => {
+  const urls = extractImportedScriptUrls(
+    'import("//internal.example/chunk.js"); import("./safe.js");',
+    "https://school.example/assets/main.js"
+  );
+  assert.deepEqual(urls, ["https://school.example/assets/safe.js"]);
+});
+
+test("discoverBundleVersion does not fetch cross-origin scripts", async () => {
+  const fetched = [];
+  const version = await discoverBundleVersion("https://school.example", async (url, options) => {
+    fetched.push({ url, options });
+    if (url === "https://school.example/") {
+      return new Response(
+        '<script src="https://internal.example/private.js"></script><script src="/main.js"></script>'
+      );
+    }
+    return new Response('const build="safe_123"; const app={bundleVersion:build};');
+  });
+
+  assert.equal(version, "safe_123");
+  assert.deepEqual(fetched.map(({ url }) => url), [
+    "https://school.example/",
+    "https://school.example/main.js"
+  ]);
+  assert.ok(fetched.every(({ options }) => options.redirect === "manual"));
+});
+
+test("discoverBundleVersion refuses a cross-origin redirect before following it", async () => {
+  const fetched = [];
+  await assert.rejects(
+    discoverBundleVersion("https://school.example", async (url) => {
+      fetched.push(url);
+      return new Response(null, {
+        status: 302,
+        headers: { location: "http://127.0.0.1/private" }
+      });
+    }),
+    /refused a cross-origin request/
+  );
+  assert.deepEqual(fetched, ["https://school.example/"]);
+});
+
+test("discoverBundleVersion follows bounded same-origin redirects", async () => {
+  const fetched = [];
+  const version = await discoverBundleVersion("https://school.example", async (url) => {
+    fetched.push(url);
+    if (url === "https://school.example/") {
+      return new Response(null, { status: 302, headers: { location: "/app/" } });
+    }
+    if (url === "https://school.example/app/") {
+      return new Response('<script src="main.js"></script>');
+    }
+    return new Response('const build="redirect_123"; const app={bundleVersion:build};');
+  });
+
+  assert.equal(version, "redirect_123");
+  assert.deepEqual(fetched, [
+    "https://school.example/",
+    "https://school.example/app/",
+    "https://school.example/app/main.js"
+  ]);
+});
+
+test("discoverBundleVersion resolves imports from a redirected script URL", async () => {
+  const fetched = [];
+  const version = await discoverBundleVersion("https://school.example", async (url) => {
+    fetched.push(url);
+    if (url === "https://school.example/") {
+      return new Response('<script src="/main.js"></script>');
+    }
+    if (url === "https://school.example/main.js") {
+      return new Response(null, {
+        status: 302,
+        headers: { location: "/assets/main.js" }
+      });
+    }
+    if (url === "https://school.example/assets/main.js") {
+      return new Response('import("./chunk.js");');
+    }
+    return new Response('const build="import_123"; const app={bundleVersion:build};');
+  });
+
+  assert.equal(version, "import_123");
+  assert.deepEqual(fetched, [
+    "https://school.example/",
+    "https://school.example/main.js",
+    "https://school.example/assets/main.js",
+    "https://school.example/assets/chunk.js"
   ]);
 });
 

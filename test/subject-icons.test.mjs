@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -44,7 +44,38 @@ test("subjectIcon creates the mapping file from the built-in defaults when missi
     });
     const written = JSON.parse(readFileSync(filePath, "utf8"));
     assert.deepEqual(written, DEFAULT_SUBJECT_ICONS);
+    if (process.platform !== "win32") {
+      assert.equal(statSync(filePath).mode & 0o777, 0o600);
+    }
   } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("loadSubjectIconMapping tightens an existing default mapping file", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "subject-icons-"));
+  const filePath = path.join(dir, "subject-icons.json");
+  const previousDataDir = process.env.DATA_DIR;
+  const previousCustomPath = process.env.GOOGLE_CALENDAR_SUBJECT_ICONS_FILE;
+  delete process.env.GOOGLE_CALENDAR_SUBJECT_ICONS_FILE;
+  process.env.DATA_DIR = dir;
+  writeFileSync(filePath, JSON.stringify({ default: "📚" }), { mode: 0o644 });
+  try {
+    assert.deepEqual(loadSubjectIconMapping(), { default: "📚" });
+    if (process.platform !== "win32") {
+      assert.equal(statSync(filePath).mode & 0o777, 0o600);
+    }
+  } finally {
+    if (previousDataDir === undefined) {
+      delete process.env.DATA_DIR;
+    } else {
+      process.env.DATA_DIR = previousDataDir;
+    }
+    if (previousCustomPath === undefined) {
+      delete process.env.GOOGLE_CALENDAR_SUBJECT_ICONS_FILE;
+    } else {
+      process.env.GOOGLE_CALENDAR_SUBJECT_ICONS_FILE = previousCustomPath;
+    }
     rmSync(dir, { recursive: true, force: true });
   }
 });

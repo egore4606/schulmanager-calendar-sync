@@ -139,12 +139,17 @@ export class SchulmanagerApi {
 
 export async function discoverBundleVersion(baseUrl, fetchImpl = globalThis.fetch) {
   const root = baseUrl.replace(/\/+$/, "");
-  const htmlResponse = await fetchImpl(`${root}/`);
+  const allowedOrigin = httpOrigin(root);
+  const { response: htmlResponse, effectiveUrl: htmlUrl } = await fetchSameOrigin(
+    `${root}/`,
+    allowedOrigin,
+    fetchImpl
+  );
   const html = await htmlResponse.text();
   const queue = unique(
     [...html.matchAll(/(?:src|href)=["']([^"']+\.js)["']/g)].map((match) =>
-      new URL(match[1], root).toString()
-    )
+      new URL(match[1], htmlUrl).toString()
+    ).filter((url) => isSameHttpOrigin(url, allowedOrigin))
   );
 
   if (queue.length === 0) {
@@ -162,7 +167,11 @@ export async function discoverBundleVersion(baseUrl, fetchImpl = globalThis.fetc
     }
     seen.add(scriptUrl);
 
-    const response = await fetchImpl(scriptUrl);
+    const { response, effectiveUrl } = await fetchSameOrigin(
+      scriptUrl,
+      allowedOrigin,
+      fetchImpl
+    );
     if (!response.ok) {
       continue;
     }
@@ -174,7 +183,7 @@ export async function discoverBundleVersion(baseUrl, fetchImpl = globalThis.fetc
       return version;
     }
 
-    for (const importedUrl of extractImportedScriptUrls(text, scriptUrl)) {
+    for (const importedUrl of extractImportedScriptUrls(text, effectiveUrl)) {
       if (!seen.has(importedUrl)) {
         queue.push(importedUrl);
       }
@@ -187,6 +196,7 @@ export async function discoverBundleVersion(baseUrl, fetchImpl = globalThis.fetc
 }
 
 export function extractImportedScriptUrls(scriptText, scriptUrl) {
+  const allowedOrigin = httpOrigin(scriptUrl);
   const imports = [
     ...scriptText.matchAll(/\bfrom\s*["']([^"']+\.js)["']/g),
     ...scriptText.matchAll(/\bimport\s*\(\s*["']([^"']+\.js)["']\s*\)/g)
@@ -197,7 +207,50 @@ export function extractImportedScriptUrls(scriptText, scriptUrl) {
       .map((match) => match[1])
       .filter((value) => value.startsWith(".") || value.startsWith("/"))
       .map((value) => new URL(value, scriptUrl).toString())
+      .filter((url) => isSameHttpOrigin(url, allowedOrigin))
   );
+}
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const MAX_BUNDLE_REDIRECTS = 5;
+
+function httpOrigin(url) {
+  const parsed = new URL(url);
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    throw new Error("Bundle discovery requires an HTTP(S) base URL.");
+  }
+  return parsed.origin;
+}
+
+function isSameHttpOrigin(url, allowedOrigin) {
+  try {
+    const parsed = new URL(url);
+    return ["http:", "https:"].includes(parsed.protocol) && parsed.origin === allowedOrigin;
+  } catch {
+    return false;
+  }
+}
+
+async function fetchSameOrigin(url, allowedOrigin, fetchImpl) {
+  let currentUrl = url;
+  for (let redirectCount = 0; redirectCount <= MAX_BUNDLE_REDIRECTS; redirectCount += 1) {
+    if (!isSameHttpOrigin(currentUrl, allowedOrigin)) {
+      throw new Error("Bundle discovery refused a cross-origin request.");
+    }
+    const response = await fetchImpl(currentUrl, { redirect: "manual" });
+    if (!REDIRECT_STATUSES.has(response.status)) {
+      return { response, effectiveUrl: currentUrl };
+    }
+    const location = response.headers.get("location");
+    if (!location) {
+      return { response, effectiveUrl: currentUrl };
+    }
+    if (redirectCount === MAX_BUNDLE_REDIRECTS) {
+      throw new Error("Bundle discovery exceeded the redirect limit.");
+    }
+    currentUrl = new URL(location, currentUrl).toString();
+  }
+  throw new Error("Bundle discovery exceeded the redirect limit.");
 }
 
 export function extractBundleVersion(scriptText) {
