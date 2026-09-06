@@ -258,7 +258,7 @@ async function listManagedEvents({ accessToken, calendarId, range }) {
   return events;
 }
 
-async function insertEvent({ accessToken, calendarId, event }) {
+export async function insertEvent({ accessToken, calendarId, event }) {
   try {
     await googleRequest({
       accessToken,

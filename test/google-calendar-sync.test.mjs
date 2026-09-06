@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { renderEventTitle, strikethroughTitle } from "../src/google-calendar-sync.mjs";
+import {
+  insertEvent,
+  renderEventTitle,
+  strikethroughTitle
+} from "../src/google-calendar-sync.mjs";
 
 const baseEvent = {
   summary: "Changed: Math",
@@ -38,4 +42,36 @@ test("renderEventTitle leaves unknown placeholders untouched", () => {
 
 test("strikethroughTitle overlays every character with a combining stroke", () => {
   assert.equal(strikethroughTitle("NW"), "N̶W̶");
+});
+
+test("insertEvent revives a tombstoned event after Google returns HTTP 409", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    requests.push({ url, options });
+    if (requests.length === 1) {
+      return new Response(
+        JSON.stringify({ error: { message: "The requested identifier already exists" } }),
+        { status: 409, headers: { "content-type": "application/json" } }
+      );
+    }
+    return new Response("{}", {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+
+  const event = { id: "sm123", summary: "Mathematics" };
+  try {
+    await insertEvent({ accessToken: "synthetic-token", calendarId: "calendar@example.test", event });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(requests.length, 2);
+  assert.equal(requests[0].options.method, "POST");
+  assert.match(requests[0].url, /\/events\?sendUpdates=none$/);
+  assert.equal(requests[1].options.method, "PUT");
+  assert.match(requests[1].url, /\/events\/sm123\?sendUpdates=none$/);
+  assert.deepEqual(JSON.parse(requests[1].options.body), event);
 });
