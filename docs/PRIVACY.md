@@ -19,6 +19,7 @@ This project processes school timetable information. Depending on the Schulmanag
 | `data/token-store.json` | Refreshed bearer token | Secret |
 | `data/schedule.json` | Normalized timetable | Personal/organizational data |
 | `data/status.json` | Range, timestamps, and event count | Operational metadata |
+| `data/subject-icons.json` | User-edited subject-to-emoji mapping | Configuration; may reveal school-specific subject names |
 
 All are ignored by Git. The Docker image also excludes them.
 

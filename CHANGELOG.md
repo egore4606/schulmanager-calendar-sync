@@ -9,6 +9,8 @@ All notable changes are documented here. The project follows [Semantic Versionin
 - Automated tests, CI, CodeQL, dependency review, releases, and GHCR publication.
 - English, German, and Russian project documentation.
 - Community health, contribution, support, and security files.
+- Parent-account student discovery with an explicit child-selection override.
+- Custom Google Calendar title templates, per-subject emoji mappings, optional cancelled-title strikethrough, and support for included cancelled and replacement-event lessons.
 
 ### Changed
 
@@ -16,6 +18,10 @@ All notable changes are documented here. The project follows [Semantic Versionin
 - Raw Schulmanager response objects are removed before timetable snapshots are persisted.
 - Health responses no longer contain the Google Calendar ID.
 - Container defaults now use a read-only filesystem, no Linux capabilities, and an integrated health check.
+
+### Fixed
+
+- Managed Google Calendar events deleted outside the service are restored from Google's cancelled tombstones instead of aborting synchronization with HTTP 409.
 
 ## [0.1.0] - 2026-07-11
 

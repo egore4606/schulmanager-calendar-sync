@@ -28,6 +28,7 @@ The service polls a rolling timetable window, converts lessons into stable calen
 | 🧭 Timezone aware | Handles Europe/Berlin daylight-saving transitions |
 | 🧩 Stable events | Inserts, updates, skips, and removes events deterministically |
 | 🏫 Lesson changes | Supports substitutions, special lessons, rooms, teachers, and cancellations |
+| 🎨 Custom titles | Supports title templates, per-subject emoji icons, and optional cancelled-title strikethrough |
 | 🔐 Local secrets | Tokens and service-account credentials stay in `.env` and `data/` |
 | 🩺 Health checks | Exposes a minimal local `/health` endpoint without calendar identifiers |
 | 🐳 Self-hosted | Runs as an unprivileged, read-only Docker container |
@@ -99,6 +100,7 @@ For predictable deployments, pin a release such as `v0.1.0` instead of `latest`.
 - Adjacent identical lessons are merged into a single event unless disabled.
 - Google event IDs are derived from stable Schulmanager lesson identifiers.
 - Only events marked `managedBy=schulmanager-calendar-sync` are reconciled or removed.
+- A managed event deleted outside the service is restored on the next sync instead of aborting the run.
 - Cancelled lessons are excluded by default.
 - Normalized snapshots deliberately omit raw Schulmanager response objects.
 
@@ -109,7 +111,7 @@ The most common settings are:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `SCHULMANAGER_TOKEN` | required | Authorized Schulmanager bearer token |
-| `SCHULMANAGER_STUDENT_ID` | auto-detected | Student override when discovery fails |
+| `SCHULMANAGER_STUDENT_ID` | auto-detected | Choose a child on a parent account, or override failed discovery |
 | `SCHULMANAGER_TIMEZONE` | `Europe/Berlin` | Timetable timezone |
 | `SYNC_INTERVAL_MINUTES` | `30` | Polling interval |
 | `SYNC_PAST_WEEKS` | `2` | Completed weeks retained behind today |
@@ -117,6 +119,9 @@ The most common settings are:
 | `GOOGLE_CALENDAR_SYNC_ENABLED` | `false` | Enable Google Calendar writes |
 | `GOOGLE_CALENDAR_ID` | empty | Calendar to manage |
 | `GOOGLE_SERVICE_ACCOUNT_KEY_FILE` | `/data/google-service-account.json` | Mounted credentials file |
+| `GOOGLE_CALENDAR_TITLE_TEMPLATE` | `({location}) {icon} {summary}` | Customize event titles |
+| `GOOGLE_CALENDAR_STRIKETHROUGH_CANCELLED` | `false` | Visually mark included cancelled lessons |
+| `GOOGLE_CALENDAR_SUBJECT_ICONS_FILE` | `${DATA_DIR}/subject-icons.json` | Customize per-subject emoji icons |
 
 Full details: [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
@@ -128,6 +133,7 @@ Runtime state lives under `data/` and is excluded from Git and Docker build cont
 - `token-store.json` — refreshed Schulmanager token;
 - `schedule.json` — privacy-reduced normalized timetable snapshot;
 - `status.json` — last successful synchronization status.
+- `subject-icons.json` — editable subject-to-emoji mapping created on first use.
 
 Back up runtime data securely, restrict filesystem access, and rotate credentials immediately if they are exposed. Vulnerabilities should be reported privately according to [SECURITY.md](SECURITY.md).
 
@@ -148,7 +154,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing a change. Operational d
 - A Schulmanager bearer token can expire and may need to be refreshed.
 - Automatic bundle-version discovery depends on Schulmanager's current web assets.
 - The service intentionally has no browser UI and no credential-management interface.
-- Google Calendar changes made manually to managed events may be overwritten on the next sync.
+- Google Calendar changes made manually to managed events may be overwritten, and deleted managed events may be restored, on the next sync.
 
 ## Contributors
 

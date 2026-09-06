@@ -17,6 +17,7 @@ Before an update, back up the runtime directory outside the repository:
 - `google-service-account.json` is the private Google key;
 - `token-store.json` may contain the freshest Schulmanager token;
 - `schedule.json` and `status.json` help diagnose the last run.
+- `subject-icons.json` contains local title customizations and should be preserved when edited.
 
 The Google Calendar itself remains the authoritative copy of published events, while GitHub releases are the authoritative source for application code and container versions.
 

@@ -16,6 +16,7 @@
 - regelmäßige Synchronisierung eines konfigurierbaren Zeitraums;
 - stabile Google-Calendar-Ereignisse statt Duplikate;
 - Räume, Lehrkräfte, Vertretungen, Sonderstunden und optionale Ausfälle;
+- anpassbare Ereignistitel, Fach-Emojis und durchgestrichene abgesagte Stunden;
 - korrekte Zeitzonen- und Sommerzeitbehandlung für `Europe/Berlin`;
 - lokaler Health-Check und privacy-reduzierte Statusdateien;
 - unprivilegierter Docker-Container mit schreibgeschütztem Dateisystem.
