@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  buildDesiredGoogleEvents,
   insertEvent,
   renderEventTitle,
   strikethroughTitle
@@ -59,6 +60,56 @@ test("renderEventTitle drops the {icon} placeholder when no icon matches", () =>
     { iconMapping: DEFAULT_SUBJECT_ICONS }
   );
   assert.equal(title, "XYZ");
+});
+
+function withEnv(vars, fn) {
+  const previous = Object.fromEntries(Object.keys(vars).map((key) => [key, process.env[key]]));
+  Object.assign(process.env, vars);
+  try {
+    return fn();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+}
+
+test("buildDesiredGoogleEvents titles exam events with the exam template, not the lesson template", () => {
+  withEnv(
+    {
+      GOOGLE_CALENDAR_TITLE_TEMPLATE: "{summary}",
+      GOOGLE_CALENDAR_EXAM_TITLE_TEMPLATE: "{type}: {subject}"
+    },
+    () => {
+      const lesson = { ...baseEvent, uid: "lesson-1", date: "2026-09-22", startTime: "08:00", endTime: "08:45" };
+      const exam = {
+        ...baseEvent,
+        uid: "exam-1",
+        date: "2026-09-22",
+        startTime: "11:25",
+        endTime: "12:10",
+        sourceType: "exam",
+        examType: "Test"
+      };
+
+      const [lessonEvent, examEvent] = [...buildDesiredGoogleEvents([lesson, exam]).values()];
+
+      assert.equal(lessonEvent.summary, "Changed: Math");
+      assert.equal(examEvent.summary, "Test: Math");
+    }
+  );
+});
+
+test("buildDesiredGoogleEvents falls back to an empty {type} for lesson events", () => {
+  withEnv({ GOOGLE_CALENDAR_TITLE_TEMPLATE: "{type}{summary}" }, () => {
+    const lesson = { ...baseEvent, uid: "lesson-1", date: "2026-09-22", startTime: "08:00", endTime: "08:45" };
+    const [lessonEvent] = [...buildDesiredGoogleEvents([lesson]).values()];
+    assert.equal(lessonEvent.summary, "Changed: Math");
+  });
 });
 
 test("strikethroughTitle overlays every character with a combining stroke", () => {

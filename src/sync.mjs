@@ -1,6 +1,7 @@
 import { chmod, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { normalizeScheduleEvents } from "./schedule-events.mjs";
+import { compareEvents, normalizeScheduleEvents } from "./schedule-events.mjs";
+import { normalizeExamEvents } from "./exam-events.mjs";
 import { SchulmanagerApi } from "./schulmanager-api.mjs";
 import { resolveSyncRange } from "./date-range.mjs";
 import { TokenStore } from "./token-store.mjs";
@@ -11,7 +12,8 @@ export async function syncSchedule({
   pastWeeks = Number(process.env.SYNC_PAST_WEEKS || 2),
   futureWeeks = Number(process.env.SYNC_FUTURE_WEEKS || 2),
   includeCancelled = envFlag("SYNC_INCLUDE_CANCELLED"),
-  mergeAdjacent = !envFlag("SYNC_NO_MERGE_ADJACENT")
+  mergeAdjacent = !envFlag("SYNC_NO_MERGE_ADJACENT"),
+  includeExams = envFlag("SYNC_EXAMS_ENABLED")
 } = {}) {
   await mkdir(dataDir, { recursive: true });
 
@@ -29,13 +31,20 @@ export async function syncSchedule({
     student
   });
 
-  const events = normalizeScheduleEvents({
+  const scheduleEvents = normalizeScheduleEvents({
     lessons,
     classHours,
     timezone,
     includeCancelled,
     mergeAdjacent
   });
+
+  let events = scheduleEvents;
+  if (includeExams) {
+    const exams = await api.getExams({ ...range, student });
+    const examEvents = normalizeExamEvents({ exams, timezone });
+    events = [...scheduleEvents, ...examEvents].sort(compareEvents);
+  }
 
   const generatedAt = new Date().toISOString();
   const payload = {
