@@ -5,6 +5,7 @@ import { loadSubjectIconMapping, subjectIcon } from "./subject-icons.mjs";
 
 const MANAGED_BY = "schulmanager-calendar-sync";
 const DEFAULT_TITLE_TEMPLATE = "({location}) {icon} {summary}";
+const DEFAULT_EXAM_TITLE_TEMPLATE = "📝 {type}: {subjectName}";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const CALENDAR_API_ROOT = "https://www.googleapis.com/calendar/v3";
 const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
@@ -79,10 +80,15 @@ export async function pushGoogleCalendar({ events, range, logger = console }) {
 
 export function buildDesiredGoogleEvents(events) {
   const template = titleTemplate();
-  const iconMapping = template.includes("{icon}") ? loadSubjectIconMapping() : undefined;
+  const examTemplate = examTitleTemplate();
+  const iconMapping =
+    template.includes("{icon}") || examTemplate.includes("{icon}")
+      ? loadSubjectIconMapping()
+      : undefined;
   const desiredEvents = new Map();
   for (const event of events) {
-    const googleEvent = toGoogleEvent(event, { template, iconMapping });
+    const eventTemplate = event.sourceType === "exam" ? examTemplate : template;
+    const googleEvent = toGoogleEvent(event, { template: eventTemplate, iconMapping });
     desiredEvents.set(googleEvent.id, googleEvent);
   }
   return desiredEvents;
@@ -125,6 +131,10 @@ function titleTemplate() {
   return process.env.GOOGLE_CALENDAR_TITLE_TEMPLATE || DEFAULT_TITLE_TEMPLATE;
 }
 
+function examTitleTemplate() {
+  return process.env.GOOGLE_CALENDAR_EXAM_TITLE_TEMPLATE || DEFAULT_EXAM_TITLE_TEMPLATE;
+}
+
 export function renderEventTitle(template, event, { iconMapping } = {}) {
   const fields = titleFields(event, {
     iconMapping,
@@ -141,6 +151,7 @@ function titleFields(event, { iconMapping, resolveIcon }) {
     subjectName: event.subjectName || "",
     icon: resolveIcon ? subjectIcon(event.subjectName, event.subjectLabel, iconMapping) : "",
     location: event.location || "",
+    type: event.examType || "",
     teachers: (event.teacherNames || [])
       .map((name) => name.replace(/^.*\((.*)\)$/, "$1"))
       .join(", "),

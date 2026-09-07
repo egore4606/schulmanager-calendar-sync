@@ -170,3 +170,38 @@ test("getCurrentStudent falls back to SCHULMANAGER_STUDENT_ID when discovery fai
     delete process.env.SCHULMANAGER_STUDENT_ID;
   }
 });
+
+test("getExams returns exam data from the exams/get-exams call", async () => {
+  const exams = [{ id: 1, date: "2026-09-10", subject: { name: "Math" } }];
+  const api = new SchulmanagerApi({
+    token: "test-token",
+    bundleVersion: "test-bundle",
+    fetchImpl: async () =>
+      new Response(JSON.stringify({ results: [{ status: 200, data: exams }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      })
+  });
+
+  assert.deepEqual(
+    await api.getExams({ start: "2026-09-07", end: "2026-10-18", student: { id: 1 } }),
+    exams
+  );
+});
+
+test("getExams throws when the exams call does not return 200", async () => {
+  const api = new SchulmanagerApi({
+    token: "test-token",
+    bundleVersion: "test-bundle",
+    fetchImpl: async () =>
+      new Response(JSON.stringify({ results: [{ status: 500 }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      })
+  });
+
+  await assert.rejects(
+    api.getExams({ start: "2026-09-07", end: "2026-10-18", student: { id: 1 } }),
+    /get-exams failed with status 500/
+  );
+});

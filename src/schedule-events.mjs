@@ -246,7 +246,7 @@ function formatTeacher(teacher) {
   return teacher.abbreviation || fullName;
 }
 
-function compareEvents(left, right) {
+export function compareEvents(left, right) {
   return (
     left.date.localeCompare(right.date) ||
     left.startTime.localeCompare(right.startTime) ||
@@ -269,7 +269,7 @@ function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
-function collapseWhitespace(value) {
+export function collapseWhitespace(value) {
   return String(value).replace(/\s+/g, " ").trim();
 }
 

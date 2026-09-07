@@ -99,6 +99,35 @@ export class SchulmanagerApi {
     };
   }
 
+  async getExams({ start, end, student }) {
+    const bundleVersion = await this.getBundleVersion();
+    const payload = {
+      bundleVersion,
+      requests: [
+        {
+          moduleName: "exams",
+          endpointName: "get-exams",
+          parameters: {
+            student,
+            start,
+            end
+          }
+        }
+      ]
+    };
+
+    const json = await this.#postJson("/api/calls", payload, "exams/get-exams");
+    const [examsResult] = json.results || [];
+
+    if (examsResult?.status !== 200) {
+      throw new Error(
+        `get-exams failed with status ${examsResult?.status ?? "unknown"}.`
+      );
+    }
+
+    return examsResult.data || [];
+  }
+
   async getBundleVersion() {
     if (this.bundleVersion) {
       return this.bundleVersion;

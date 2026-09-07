@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "server": "node server.mjs",
-    "check": "node --check server.mjs && node --check src/schulmanager-api.mjs && node --check src/schedule-events.mjs && node --check src/token-store.mjs && node --check src/date-range.mjs && node --check src/sync.mjs && node --check src/timezone.mjs && node --check src/google-calendar-sync.mjs && node --check src/subject-icons.mjs",
+    "check": "node --check server.mjs && node --check src/schulmanager-api.mjs && node --check src/schedule-events.mjs && node --check src/exam-events.mjs && node --check src/token-store.mjs && node --check src/date-range.mjs && node --check src/sync.mjs && node --check src/timezone.mjs && node --check src/google-calendar-sync.mjs && node --check src/subject-icons.mjs",
     "test": "node --test",
     "verify": "npm run check && npm test"
   },

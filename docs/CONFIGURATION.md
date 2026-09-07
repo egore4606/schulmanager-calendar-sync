@@ -21,6 +21,7 @@ Copy `.env.example` to `.env` and keep the resulting file outside version contro
 | `SYNC_FUTURE_WEEKS` | No | `2` | Complete weeks synchronized after the current week. |
 | `SYNC_INCLUDE_CANCELLED` | No | `false` | Include cancelled lessons as events. |
 | `SYNC_NO_MERGE_ADJACENT` | No | `false` | Keep adjacent identical lessons as separate events. |
+| `SYNC_EXAMS_ENABLED` | No | `false` | Also fetch exams (Klassenarbeiten) and sync them as calendar events alongside lessons. |
 
 Boolean values accept `1`, `true`, `yes`, or `on` (case-insensitive).
 
@@ -32,7 +33,8 @@ Boolean values accept `1`, `true`, `yes`, or `on` (case-insensitive).
 | `GOOGLE_CALENDAR_ID` | When enabled | — | Target calendar ID. It is often an email-like value and should be treated as private metadata. |
 | `GOOGLE_SERVICE_ACCOUNT_KEY_FILE` | When enabled | `/data/google-service-account.json` | Path to the mounted JSON key. |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | Alternative | — | Complete credentials JSON supplied through the environment. Prefer a mounted file to avoid accidental log or process inspection exposure. |
-| `GOOGLE_CALENDAR_TITLE_TEMPLATE` | No | `({location}) {icon} {summary}` | Custom event title. See placeholders below. |
+| `GOOGLE_CALENDAR_TITLE_TEMPLATE` | No | `({location}) {icon} {summary}` | Custom lesson event title. See placeholders below. |
+| `GOOGLE_CALENDAR_EXAM_TITLE_TEMPLATE` | No | `📝 {type}: {subjectName}` | Custom exam event title. Same placeholders plus `{type}` (the exam type from Schulmanager, e.g. "Klassenarbeit" or "Test"); `{location}` and `{teachers}` are normally empty since `get-exams` doesn't return that data. |
 | `GOOGLE_CALENDAR_STRIKETHROUGH_CANCELLED` | No | `false` | Render cancelled lesson titles with a Unicode strikethrough overlay. Cosmetic only: the Calendar API has no real text formatting, and rendering may vary by client. |
 | `GOOGLE_CALENDAR_SUBJECT_ICONS_FILE` | No | `${DATA_DIR}/subject-icons.json` | Path to the subject-to-emoji mapping used for `{icon}`. Created automatically from the built-in defaults on first run; edit it to add or change entries. |
 
@@ -56,17 +58,18 @@ The file must be a JSON object whose values are strings. If it is unreadable, in
 
 ### Title placeholders
 
-`GOOGLE_CALENDAR_TITLE_TEMPLATE` supports the following placeholders. An unknown placeholder is left untouched. Any `()` left empty by a missing placeholder (e.g. no room) is dropped, and repeated whitespace is collapsed.
+`GOOGLE_CALENDAR_TITLE_TEMPLATE` and `GOOGLE_CALENDAR_EXAM_TITLE_TEMPLATE` support the following placeholders. An unknown placeholder is left untouched. Any `()` left empty by a missing placeholder (e.g. no room) is dropped, and repeated whitespace is collapsed.
 
 | Placeholder | Value |
 | --- | --- |
-| `{summary}` | The normalized summary, including a `Changed:`/`Cancelled:`/`Special:` prefix when applicable. |
-| `{location}` | The room name, or empty when none is known. |
+| `{summary}` | The normalized summary, including a `Changed:`/`Cancelled:`/`Special:` prefix when applicable. Lessons only. |
+| `{location}` | The room name, or empty when none is known. Lessons only; always empty for exams. |
 | `{subject}` | The short subject label (e.g. `Math`). |
 | `{subjectName}` | The full subject name. |
 | `{icon}` | An emoji for the subject, looked up from the subject-icons mapping file (see above); empty when nothing matches. |
-| `{teachers}` | Comma-separated teacher full names, without abbreviations. |
+| `{teachers}` | Comma-separated teacher full names, without abbreviations. Lessons only; always empty for exams. |
 | `{classHour}` | The class hour number(s). |
+| `{type}` | The exam type as configured in Schulmanager (e.g. `Klassenarbeit`, `Test`). Exams only; always empty for lessons. |
 
 Example: `GOOGLE_CALENDAR_TITLE_TEMPLATE={icon} {subject} - {location}` renders titles like `➗ Math - Room 204`.
 
