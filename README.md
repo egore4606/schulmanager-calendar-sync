@@ -103,6 +103,7 @@ For predictable deployments, pin a release such as `v0.1.0` instead of `latest`.
 - Adjacent identical lessons are merged into a single event unless disabled.
 - Google event IDs are derived from stable Schulmanager lesson identifiers.
 - Only events marked `managedBy=schulmanager-calendar-sync` are reconciled or removed.
+- Set `GOOGLE_CALENDAR_KEEP_PAST_EVENTS=true` to preserve managed events from past days in Google Calendar even when they disappear upstream.
 - A managed event deleted outside the service is restored on the next sync instead of aborting the run.
 - Cancelled lessons are excluded by default.
 - Normalized snapshots deliberately omit raw Schulmanager response objects.
@@ -125,6 +126,7 @@ The most common settings are:
 | `GOOGLE_CALENDAR_TITLE_TEMPLATE` | `({location}) {icon} {summary}` | Customize event titles |
 | `GOOGLE_CALENDAR_STRIKETHROUGH_CANCELLED` | `false` | Visually mark included cancelled lessons |
 | `GOOGLE_CALENDAR_SUBJECT_ICONS_FILE` | `${DATA_DIR}/subject-icons.json` | Customize per-subject emoji icons |
+| `GOOGLE_CALENDAR_KEEP_PAST_EVENTS` | `false` | Keep past days' events in Google Calendar |
 
 Full details: [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 

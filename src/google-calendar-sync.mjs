@@ -1,5 +1,6 @@
 import { createHash, createSign } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { isoDateInTimeZone } from "./date-range.mjs";
 import { rfc3339WithOffset } from "./timezone.mjs";
 import { loadSubjectIconMapping, subjectIcon } from "./subject-icons.mjs";
 
@@ -19,7 +20,18 @@ export function isGoogleCalendarSyncEnabled() {
   return envFlag("GOOGLE_CALENDAR_SYNC_ENABLED");
 }
 
-export async function pushGoogleCalendar({ events, range, logger = console }) {
+export function isKeepPastEventsEnabled() {
+  return envFlag("GOOGLE_CALENDAR_KEEP_PAST_EVENTS");
+}
+
+export async function pushGoogleCalendar({
+  events,
+  range,
+  timezone = process.env.SCHULMANAGER_TIMEZONE || "Europe/Berlin",
+  keepPastEvents = isKeepPastEventsEnabled(),
+  today = new Date(),
+  logger = console
+}) {
   const calendarId = requiredEnv("GOOGLE_CALENDAR_ID");
   const credentials = await readCredentials();
   const accessToken = await getAccessToken(credentials);
@@ -59,7 +71,14 @@ export async function pushGoogleCalendar({ events, range, logger = console }) {
   }
 
   for (const event of existingEvents) {
-    if (!desiredEvents.has(event.id)) {
+    if (
+      shouldDeleteManagedEvent(event, {
+        desiredEvents,
+        keepPastEvents,
+        timezone,
+        today
+      })
+    ) {
       await deleteEvent({ accessToken, calendarId, eventId: event.id });
       deleted += 1;
     }
@@ -76,6 +95,73 @@ export async function pushGoogleCalendar({ events, range, logger = console }) {
     `Google Calendar sync finished: ${inserted} inserted, ${updated} updated, ${deleted} deleted, ${skipped} unchanged`
   );
   return result;
+}
+
+export function shouldDeleteManagedEvent(
+  existingEvent,
+  {
+    desiredEvents,
+    keepPastEvents = false,
+    timezone = "Europe/Berlin",
+    today = new Date()
+  } = {}
+) {
+  if (desiredEvents.has(existingEvent.id)) {
+    return false;
+  }
+  if (keepPastEvents && isPastGoogleEvent(existingEvent, { timezone, today })) {
+    return false;
+  }
+  return true;
+}
+
+export function isPastGoogleEvent(
+  event,
+  { timezone = "Europe/Berlin", today = new Date() } = {}
+) {
+  const effectiveTimezone =
+    timezone || event?.end?.timeZone || event?.start?.timeZone || "Europe/Berlin";
+  const eventDate = googleEventDate(event, effectiveTimezone);
+  if (!eventDate) {
+    return false;
+  }
+  const currentDate = safeIsoDateInTimeZone(today, effectiveTimezone);
+  return eventDate < currentDate;
+}
+
+function googleEventDate(event, timezone) {
+  const rawDateTime = event?.end?.dateTime || event?.start?.dateTime;
+  if (rawDateTime) {
+    const parsed = new Date(rawDateTime);
+    if (!Number.isNaN(parsed.getTime())) {
+      return safeIsoDateInTimeZone(parsed, timezone);
+    }
+  }
+
+  const rawDate = event?.start?.date || event?.end?.date;
+  if (typeof rawDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+    return rawDate;
+  }
+
+  const uid = event?.extendedProperties?.private?.schulmanagerUid;
+  const uidMatch = typeof uid === "string" ? uid.match(/\b(\d{4}-\d{2}-\d{2})\b/) : null;
+  return uidMatch ? uidMatch[1] : null;
+}
+
+function safeIsoDateInTimeZone(date, timezone) {
+  for (const candidate of [timezone, "Europe/Berlin"]) {
+    if (!candidate) {
+      continue;
+    }
+    try {
+      return isoDateInTimeZone(date, candidate);
+    } catch (error) {
+      if (!(error instanceof RangeError)) {
+        throw error;
+      }
+    }
+  }
+  return date.toISOString().slice(0, 10);
 }
 
 export function buildDesiredGoogleEvents(events) {

@@ -78,7 +78,8 @@ async function runSync() {
     const googleCalendar = isGoogleCalendarSyncEnabled()
       ? await pushGoogleCalendar({
           events: result.events,
-          range: result.range
+          range: result.range,
+          timezone: result.timezone
         })
       : null;
     lastStatus = {
