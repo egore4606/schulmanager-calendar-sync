@@ -70,6 +70,7 @@ Every sync compares the new timetable with the previous `schedule.json` and writ
 | `GOOGLE_CALENDAR_EXAM_TITLE_TEMPLATE` | No | `📝 {type}: {subjectName}` | Custom exam event title. Same placeholders plus `{type}` (the exam type from Schulmanager, e.g. "Klassenarbeit" or "Test"); `{location}` and `{teachers}` are normally empty since `get-exams` doesn't return that data. |
 | `GOOGLE_CALENDAR_STRIKETHROUGH_CANCELLED` | No | `false` | Render cancelled lesson titles with a Unicode strikethrough overlay. Cosmetic only: the Calendar API has no real text formatting, and rendering may vary by client. |
 | `GOOGLE_CALENDAR_SUBJECT_ICONS_FILE` | No | `${DATA_DIR}/subject-icons.json` | Path to the subject-to-emoji mapping used for `{icon}`. Created automatically from the built-in defaults on first run; edit it to add or change entries. |
+| `GOOGLE_CALENDAR_KEEP_PAST_EVENTS` | No | `false` | Keep managed events on past days (before today in `SCHULMANAGER_TIMEZONE`) in Google Calendar instead of deleting them when they are no longer returned upstream. Today's and future events are still reconciled and replaced normally. |
 
 The target calendar must be shared with the service account's `client_email` and grant permission to edit events.
 

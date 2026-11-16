@@ -11,6 +11,7 @@ All notable changes are documented here. The project follows [Semantic Versionin
 - Community health, contribution, support, and security files.
 - Parent-account student discovery with an explicit child-selection override.
 - Custom Google Calendar title templates, per-subject emoji mappings, optional cancelled-title strikethrough, and support for included cancelled and replacement-event lessons.
+- `GOOGLE_CALENDAR_KEEP_PAST_EVENTS` option to preserve managed Google Calendar events on past days when they disappear upstream.
 - `data/changes.json` with all event changes since the previous sync, plus an optional `SYNC_WEBHOOK_URL` that receives it in one request at the end of each sync.
 
 ### Changed
